@@ -90,12 +90,27 @@ abstract class CBZ {
     if (f.length == 1 && f.first is Directory) {
       cache = f.first as Directory;
     }
+    // NEW: Detect multi-directory archive (chapters as subdirectories)
+    var entries = cache.listSync();
+    var subDirs = entries.whereType<Directory>().toList();
+    if (subDirs.isNotEmpty &&
+        !entries.any((e) =>
+            e is File &&
+            ['jpg', 'jpeg', 'png', 'webp', 'gif', 'jpe']
+                .contains(e.path.split('.').last.toLowerCase()))) {
+      return _importMultiDirArchive(file, subDirs);
+    }
     var metaDataFile = File(FilePath.join(cache.path, 'metadata.json'));
     ComicMetaData? metaData;
     if (metaDataFile.existsSync()) {
       try {
+        var text = metaDataFile.readAsStringSync();
+        // Strip UTF-8 BOM if present (0xFEFF)
+        if (text.isNotEmpty && text.codeUnitAt(0) == 0xFEFF) {
+          text = text.substring(1);
+        }
         metaData =
-            ComicMetaData.fromJson(jsonDecode(metaDataFile.readAsStringSync()));
+            ComicMetaData.fromJson(jsonDecode(text));
       } catch (_) {}
     }
     metaData ??= ComicMetaData(
@@ -182,6 +197,108 @@ abstract class CBZ {
       createdAt: DateTime.now(),
     );
     await cache.delete(recursive: true);
+    return comic;
+  }
+
+  /// Recursively collect all image files under a directory, flattening subdirectories.
+  static List<File> _collectImagesRecursive(Directory dir) {
+    var result = <File>[];
+    var imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'jpe'];
+    void walk(Directory d) {
+      for (var entry in d.listSync()) {
+        if (entry is File) {
+          if (imageExts.contains(entry.path.split('.').last.toLowerCase())) {
+            result.add(entry);
+          }
+        } else if (entry is Directory) {
+          walk(entry);
+        }
+      }
+    }
+    walk(dir);
+    return result;
+  }
+
+  /// Import an archive where each subdirectory is a chapter.
+  static Future<LocalComic> _importMultiDirArchive(
+      File file, List<Directory> dirs) async {
+    dirs.sort((a, b) => a.path.compareTo(b.path));
+
+    var title = file.name.substring(0, file.name.lastIndexOf('.'));
+
+    var old = LocalManager().findByName(title);
+    if (old != null) {
+      throw Exception('Comic with name $title already exists');
+    }
+
+    var dest = Directory(FilePath.join(
+        LocalManager().path, sanitizeFileName(title)));
+    dest.createSync();
+
+    var cpMap = <String, String>{};
+    File? coverFile;
+    var chapterIndex = 0;
+
+    for (var dir in dirs) {
+      // Recursively collect images (handles nested subdirectories)
+      var images = _collectImagesRecursive(dir);
+      if (images.isEmpty) continue;
+
+      images.sort((a, b) {
+        var ai = int.tryParse(a.basenameWithoutExt);
+        var bi = int.tryParse(b.basenameWithoutExt);
+        if (ai != null && bi != null) return ai.compareTo(bi);
+        return a.path.compareTo(b.path);
+      });
+
+      var chapterId = chapterIndex.toString();
+      cpMap[chapterId] = dir.name;
+
+      var chapterDir = Directory(FilePath.join(dest.path, chapterId));
+      chapterDir.createSync();
+
+      for (var i = 0; i < images.length; i++) {
+        var src = images[i];
+        var dst = File(FilePath.join(
+            chapterDir.path, '${i + 1}.${src.path.split('.').last}'));
+        await src.copyMem(dst.path);
+
+        // First image of first chapter = cover
+        if (coverFile == null) {
+          coverFile = dst;
+        }
+      }
+      chapterIndex++;
+    }
+
+    if (cpMap.isEmpty) {
+      dest.deleteSync(recursive: true);
+      throw Exception('No images found in the archive');
+    }
+
+    // Copy cover to root
+    if (coverFile != null) {
+      var coverDest = File(FilePath.join(
+          dest.path, 'cover.${coverFile.path.split('.').last}'));
+      if (!coverDest.existsSync()) {
+        await coverFile.copyMem(coverDest.path);
+      }
+    }
+
+    var comic = LocalComic(
+      id: LocalManager().findValidId(ComicType.local),
+      title: title,
+      subtitle: '',
+      tags: [],
+      comicType: ComicType.local,
+      directory: dest.name,
+      chapters: ComicChapters.fromJsonOrNull(cpMap),
+      downloadedChapters: cpMap.keys.toList(),
+      cover: coverFile != null
+          ? 'cover.${coverFile.path.split('.').last}'
+          : '',
+      createdAt: DateTime.now(),
+    );
     return comic;
   }
 
