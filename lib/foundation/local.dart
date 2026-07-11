@@ -233,14 +233,7 @@ class LocalManager with ChangeNotifier {
         return FilePath.join(App.dataPath, 'local');
       }
     } else if (App.isIOS) {
-      var oldPath = FilePath.join(App.dataPath, 'local');
-      if (Directory(oldPath).existsSync() &&
-          Directory(oldPath).listSync().isNotEmpty) {
-        return oldPath;
-      } else {
-        var directory = await getApplicationDocumentsDirectory();
-        return FilePath.join(directory.path, 'local');
-      }
+      return FilePath.join(App.dataPath, 'local');
     } else {
       return FilePath.join(App.dataPath, 'local');
     }

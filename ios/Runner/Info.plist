@@ -48,9 +48,9 @@
 	<key>NSPhotoLibraryUsageDescription</key>
   <string>Choose images</string>
 	<key>UIFileSharingEnabled</key>
-	<true/>
+	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
+	<false/>
 	<key>NSFaceIDUsageDescription</key>
   <string>Ensure that the operation is being performed by the user themselves.</string>
   <key>LSApplicationCategoryType</key>
