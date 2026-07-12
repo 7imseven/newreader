@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:venera/foundation/log.dart';
-import 'package:venera/pages/auth_page.dart';
-import 'package:venera/pages/main_page.dart';
+import 'package:venera/pages/fake_chat_page.dart';
 import 'package:venera/utils/io.dart';
 import 'package:window_manager/window_manager.dart';
 import 'components/components.dart';
@@ -64,57 +63,13 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     App.registerForceRebuild(forceRebuild);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    WidgetsBinding.instance.addObserver(this);
     checkUpdates();
     super.initState();
-  }
-
-  bool isAuthPageActive = false;
-
-  OverlayEntry? hideContentOverlay;
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!App.isMobile || !appdata.settings['authorizationRequired']) {
-      return;
-    }
-    if (state == AppLifecycleState.inactive && hideContentOverlay == null) {
-      hideContentOverlay = OverlayEntry(
-        builder: (context) {
-          return Positioned.fill(
-            child: Container(
-              width: double.infinity,
-              height: double.infinity,
-              color: App.rootContext.colorScheme.surface,
-            ),
-          );
-        },
-      );
-      Overlay.of(App.rootContext).insert(hideContentOverlay!);
-    } else if (hideContentOverlay != null &&
-        state == AppLifecycleState.resumed) {
-      hideContentOverlay!.remove();
-      hideContentOverlay = null;
-    }
-    if (state == AppLifecycleState.hidden &&
-        !isAuthPageActive &&
-        !IO.isSelectingFiles) {
-      isAuthPageActive = true;
-      App.rootContext.to(
-        () => AuthPage(
-          onSuccessfulAuth: () {
-            App.rootContext.pop();
-            isAuthPageActive = false;
-          },
-        ),
-      );
-    }
-    super.didChangeAppLifecycleState(state);
   }
 
   void forceRebuild() {
@@ -177,16 +132,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    Widget home;
-    if (appdata.settings['authorizationRequired']) {
-      home = AuthPage(
-        onSuccessfulAuth: () {
-          App.rootContext.toReplacement(() => const MainPage());
-        },
-      );
-    } else {
-      home = const MainPage();
-    }
+    const home = FakeChatPage();
     return DynamicColorBuilder(builder: (light, dark) {
       Color? primary, secondary, tertiary;
       if (appdata.settings['color'] != 'system' ||
