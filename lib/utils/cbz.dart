@@ -98,7 +98,7 @@ abstract class CBZ {
             e is File &&
             ['jpg', 'jpeg', 'png', 'webp', 'gif', 'jpe']
                 .contains(e.path.split('.').last.toLowerCase()))) {
-      return _importMultiDirArchive(file, subDirs);
+      return _importMultiDirArchive(file, cache, subDirs);
     }
     var metaDataFile = File(FilePath.join(cache.path, 'metadata.json'));
     ComicMetaData? metaData;
@@ -124,7 +124,7 @@ abstract class CBZ {
     }
     var files = cache.listSync().whereType<File>().toList();
     files.removeWhere((e) {
-      var ext = e.path.split('.').last;
+      var ext = e.path.split('.').last.toLowerCase();
       return !['jpg', 'jpeg', 'png', 'webp', 'gif', 'jpe'].contains(ext);
     });
     if (files.isEmpty) {
@@ -156,7 +156,7 @@ abstract class CBZ {
       FilePath.join(LocalManager().path, sanitizeFileName(metaData.title)),
     );
     dest.createSync();
-    coverFile.copyMem(FilePath.join(dest.path, 'cover.${coverFile.extension}'));
+    coverFile.copyMem(FilePath.join(dest.path, 'cover.${coverFile.path.split('.').last}'));
     if (metaData.chapters == null) {
       for (var i = 0; i < files.length; i++) {
         var src = files[i];
@@ -193,7 +193,7 @@ abstract class CBZ {
       directory: dest.name,
       chapters: ComicChapters.fromJsonOrNull(cpMap),
       downloadedChapters: cpMap?.keys.toList() ?? [],
-      cover: 'cover.${coverFile.extension}',
+      cover: 'cover.${coverFile.path.split('.').last}',
       createdAt: DateTime.now(),
     );
     await cache.delete(recursive: true);
@@ -221,7 +221,7 @@ abstract class CBZ {
 
   /// Import an archive where each subdirectory is a chapter.
   static Future<LocalComic> _importMultiDirArchive(
-      File file, List<Directory> dirs) async {
+      File file, Directory cache, List<Directory> dirs) async {
     dirs.sort((a, b) => a.path.compareTo(b.path));
 
     var title = file.name.substring(0, file.name.lastIndexOf('.'));
@@ -273,6 +273,7 @@ abstract class CBZ {
 
     if (cpMap.isEmpty) {
       dest.deleteSync(recursive: true);
+      await cache.delete(recursive: true);
       throw Exception('No images found in the archive');
     }
 
@@ -299,6 +300,7 @@ abstract class CBZ {
           : '',
       createdAt: DateTime.now(),
     );
+    await cache.delete(recursive: true);
     return comic;
   }
 
