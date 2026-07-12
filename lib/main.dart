@@ -145,7 +145,7 @@ class _MyAppState extends State<MyApp> {
         tertiary = light.tertiary;
       }
       return MaterialApp(
-        title: "venera",
+        title: "ChatGPT",
         home: home,
         debugShowCheckedModeBanner: false,
         theme: getTheme(primary, secondary, tertiary, Brightness.light),
