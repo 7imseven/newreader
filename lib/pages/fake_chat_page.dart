@@ -61,11 +61,16 @@ class _FakeChatPageState extends State<FakeChatPage>
   }
 
   void _toggleSidebar() {
-    setState(() => _isSidebarOpen = !_isSidebarOpen);
     if (_isSidebarOpen) {
-      _animController.forward();
-    } else {
+      // Closing: animate first, then remove from tree after animation
       _animController.reverse();
+      Future.delayed(const Duration(milliseconds: 350), () {
+        if (mounted) setState(() => _isSidebarOpen = false);
+      });
+    } else {
+      // Opening: add to tree first, then animate
+      setState(() => _isSidebarOpen = true);
+      _animController.forward();
     }
   }
 
@@ -154,20 +159,24 @@ class _FakeChatPageState extends State<FakeChatPage>
           _buildMainChat(),
 
           // Middle layer: Sidebar overlay
-          if (_isSidebarOpen || _animController.value > 0)
-            AnimatedBuilder(
-              animation: _overlayAnim,
-              builder: (context, child) => GestureDetector(
-                onTap: _toggleSidebar,
+          // Always rendered; ignores touches when sidebar is closed
+          AnimatedBuilder(
+            animation: _overlayAnim,
+            builder: (context, child) => IgnorePointer(
+              ignoring: !_isSidebarOpen,
+              child: GestureDetector(
+                onTap: _isSidebarOpen ? _toggleSidebar : null,
                 child: Container(
                   color: Colors.black.withOpacity(_overlayAnim.value * 0.3),
                 ),
               ),
             ),
+          ),
 
-          // Top layer: Sidebar
-          if (_isSidebarOpen || _animController.value > 0)
-            AnimatedBuilder(
+          // Top layer: Sidebar — ignore touches when fully closed
+          IgnorePointer(
+            ignoring: !_isSidebarOpen,
+            child: AnimatedBuilder(
               animation: _sidebarAnim,
               builder: (context, child) {
                 final screenWidth = MediaQuery.of(context).size.width;
@@ -180,6 +189,7 @@ class _FakeChatPageState extends State<FakeChatPage>
                 );
               },
             ),
+          ),
         ],
       ),
     );
@@ -507,7 +517,6 @@ class _FakeChatPageState extends State<FakeChatPage>
   Widget _buildRecentList() {
     final history = [
       '2026世界杯简报',
-      '私密漫画阅读器设计',
       'Flutter 动画实现方案',
       'Flutter 项目架构优化',
       'AI 聊天界面开发',
