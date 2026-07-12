@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:venera/foundation/app.dart';
 import 'package:venera/foundation/context.dart';
 import 'package:venera/pages/video/video_database.dart';
 import 'package:venera/pages/video/video_import.dart';
@@ -30,12 +29,12 @@ class _VideoPageState extends State<VideoPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('视频', style: TextStyle(fontWeight: FontWeight.w600)),
+        title: const Text('Video', style: TextStyle(fontWeight: FontWeight.w600)),
         actions: [
           TextButton.icon(
             onPressed: _importVideo,
             icon: const Icon(Icons.add, size: 20),
-            label: const Text('导入'),
+            label: const Text('Import'),
           ),
         ],
       ),
@@ -48,14 +47,16 @@ class _VideoPageState extends State<VideoPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.video_library_outlined, size: 64, color: Colors.grey.shade300),
+          Icon(Icons.video_library_outlined,
+              size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 16),
-          Text('还没有视频', style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
+          Text('No videos yet',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade500)),
           const SizedBox(height: 8),
           TextButton.icon(
             onPressed: _importVideo,
             icon: const Icon(Icons.add),
-            label: const Text('导入第一个视频'),
+            label: const Text('Import first video'),
           ),
         ],
       ),
@@ -73,7 +74,7 @@ class _VideoPageState extends State<VideoPage> {
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
         ),
-        itemCount: _tags.length + 1, // +1 for "new tag" card
+        itemCount: _tags.length + 1,
         itemBuilder: (context, index) {
           if (index == _tags.length) return _buildNewTagCard();
           return _buildTagCard(_tags[index]);
@@ -86,7 +87,12 @@ class _VideoPageState extends State<VideoPage> {
     final color = _parseColor(tag.color);
     return GestureDetector(
       onTap: () {
-        context.to(() => VideoTagListPage(tagId: tag.id, tagName: tag.name, tagEmoji: tag.emoji))
+        context
+            .to(() => VideoTagListPage(
+                  tagId: tag.id,
+                  tagName: tag.name,
+                  tagEmoji: tag.emoji,
+                ))
             .then((_) => _refresh());
       },
       onLongPress: () => _showTagMenu(tag),
@@ -118,7 +124,7 @@ class _VideoPageState extends State<VideoPage> {
             ),
             const SizedBox(height: 4),
             Text(
-              '${tag.videoCount} 个视频',
+              '${tag.videoCount} videos',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
             ),
           ],
@@ -129,7 +135,7 @@ class _VideoPageState extends State<VideoPage> {
 
   Widget _buildNewTagCard() {
     return GestureDetector(
-      onTap: () => _showCreateTagDialog(),
+      onTap: _showCreateTagDialog,
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -145,7 +151,7 @@ class _VideoPageState extends State<VideoPage> {
             Icon(Icons.add, size: 36, color: Colors.grey.shade400),
             const SizedBox(height: 8),
             Text(
-              '新建标签',
+              'New tag',
               style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
             ),
           ],
@@ -156,59 +162,106 @@ class _VideoPageState extends State<VideoPage> {
 
   void _showCreateTagDialog() {
     final controller = TextEditingController();
-    String selectedEmoji = '📁';
+    String selectedEmoji = '🎬';
     String selectedColor = '#4A90D9';
-    final emojis = ['📁', '🎮', '📚', '🎵', '🎬', '📝', '💻', '🎨', '🏃', '🌍', '🔧', '📦'];
-    final colors = ['#4A90D9', '#E74C3C', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C', '#E67E22', '#34495E'];
+
+    const emojis = ['🎬', '📺', '🎮', '📽️', '🎵', '📰', '🧪', '📚'];
+    const colors = [
+      '#4A90D9',
+      '#E74C3C',
+      '#2ECC71',
+      '#F39C12',
+      '#9B59B6',
+      '#1ABC9C',
+      '#E67E22',
+      '#34495E',
+    ];
 
     showDialog(
       context: context,
       builder: (dialogCtx) => StatefulBuilder(
         builder: (ctx, setDState) => AlertDialog(
-          title: const Text('新建标签'),
+          title: const Text('New tag'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: controller,
                 decoration: const InputDecoration(
-                  labelText: '标签名称',
-                  hintText: '例如: 游戏、教育',
+                  labelText: 'Tag name',
+                  hintText: 'Example: Games, Education',
                   border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
-              const Text('选择图标', style: TextStyle(fontSize: 13)),
+              const Text('Pick an icon', style: TextStyle(fontSize: 13)),
               const SizedBox(height: 6),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: emojis.map((e) => GestureDetector(
-                  onTap: () => setDState(() => selectedEmoji = e),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: selectedEmoji == e ? Colors.blue.withOpacity(0.1) : null,
-                      borderRadius: BorderRadius.circular(8),
-                      border: selectedEmoji == e ? Border.all(color: Colors.blue) : null,
-                    ),
-                    child: Text(e, style: const TextStyle(fontSize: 24)),
-                  ),
-                )).toList(),
+                children: emojis
+                    .map(
+                      (e) => GestureDetector(
+                        onTap: () => setDState(() => selectedEmoji = e),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: selectedEmoji == e
+                                ? Colors.blue.withOpacity(0.1)
+                                : null,
+                            borderRadius: BorderRadius.circular(8),
+                            border: selectedEmoji == e
+                                ? Border.all(color: Colors.blue)
+                                : null,
+                          ),
+                          child: Text(e, style: const TextStyle(fontSize: 24)),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+              const SizedBox(height: 12),
+              const Text('Pick a color', style: TextStyle(fontSize: 13)),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: colors
+                    .map(
+                      (c) => GestureDetector(
+                        onTap: () => setDState(() => selectedColor = c),
+                        child: Container(
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            color: _parseColor(c),
+                            shape: BoxShape.circle,
+                            border: selectedColor == c
+                                ? Border.all(color: Colors.black, width: 2)
+                                : null,
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
               ),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(dialogCtx), child: const Text('取消')),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: () {
-                if (controller.text.trim().isNotEmpty) {
-                  _db.addTag(controller.text.trim(), emoji: selectedEmoji, color: selectedColor);
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  _db.addTag(name, emoji: selectedEmoji, color: selectedColor);
                   Navigator.pop(dialogCtx);
                   _refresh();
                 }
               },
-              child: const Text('创建'),
+              child: const Text('Create'),
             ),
           ],
         ),
@@ -225,7 +278,7 @@ class _VideoPageState extends State<VideoPage> {
           children: [
             ListTile(
               leading: const Icon(Icons.edit),
-              title: const Text('重命名'),
+              title: const Text('Rename'),
               onTap: () {
                 Navigator.pop(ctx);
                 _showRenameTagDialog(tag);
@@ -233,7 +286,7 @@ class _VideoPageState extends State<VideoPage> {
             ),
             ListTile(
               leading: const Icon(Icons.delete, color: Colors.red),
-              title: const Text('删除标签', style: TextStyle(color: Colors.red)),
+              title: const Text('Delete tag', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.pop(ctx);
                 _confirmDeleteTag(tag);
@@ -250,22 +303,26 @@ class _VideoPageState extends State<VideoPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('重命名标签'),
+        title: const Text('Rename tag'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(border: OutlineInputBorder()),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                _db.updateTag(tag.id, name: controller.text.trim());
+              final name = controller.text.trim();
+              if (name.isNotEmpty) {
+                _db.updateTag(tag.id, name: name);
                 Navigator.pop(ctx);
                 _refresh();
               }
             },
-            child: const Text('确认'),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -276,10 +333,14 @@ class _VideoPageState extends State<VideoPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除标签'),
-        content: Text('删除「${tag.name}」将同时删除该标签下的 ${tag.videoCount} 个视频，确定吗？'),
+        title: const Text('Delete tag'),
+        content: Text(
+            'Delete "${tag.name}" and all ${tag.videoCount} videos under it?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
@@ -287,7 +348,7 @@ class _VideoPageState extends State<VideoPage> {
               Navigator.pop(ctx);
               _refresh();
             },
-            child: const Text('删除'),
+            child: const Text('Delete'),
           ),
         ],
       ),

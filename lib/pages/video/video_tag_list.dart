@@ -43,7 +43,7 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
             padding: const EdgeInsets.only(right: 8),
             child: Center(
               child: Text(
-                '${_videos.length} 个视频',
+                '${_videos.length} videos',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
               ),
             ),
@@ -52,12 +52,14 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
       ),
       body: _videos.isEmpty
           ? Center(
-              child: Text('暂无视频', style: TextStyle(color: Colors.grey.shade500)),
+              child: Text('No videos yet',
+                  style: TextStyle(color: Colors.grey.shade500)),
             )
           : ListView.separated(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: _videos.length,
-              separatorBuilder: (_, __) => const Divider(height: 1, indent: 16, endIndent: 16),
+              separatorBuilder: (_, __) =>
+                  const Divider(height: 1, indent: 16, endIndent: 16),
               itemBuilder: (context, index) => _buildVideoTile(_videos[index]),
             ),
     );
@@ -73,7 +75,8 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.play_circle_fill_outlined, size: 28, color: Colors.blue),
+        child: const Icon(Icons.play_circle_fill_outlined,
+            size: 28, color: Colors.blue),
       ),
       title: Text(
         video.title,
@@ -83,12 +86,16 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
       ),
       subtitle: Row(
         children: [
-          Text(video.durationFormatted, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          Text(video.durationFormatted,
+              style:
+                  TextStyle(fontSize: 12, color: Colors.grey.shade500)),
           if (video.bookmarkCount > 0) ...[
             const SizedBox(width: 8),
             Icon(Icons.bookmark, size: 12, color: Colors.amber.shade600),
             const SizedBox(width: 2),
-            Text('${video.bookmarkCount}', style: TextStyle(fontSize: 12, color: Colors.amber.shade600)),
+            Text('${video.bookmarkCount}',
+                style: TextStyle(
+                    fontSize: 12, color: Colors.amber.shade600)),
           ],
         ],
       ),
@@ -97,13 +104,18 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
           if (value == 'rename') _showRenameDialog(video);
           if (value == 'delete') _confirmDelete(video);
         },
-        itemBuilder: (_) => [
-          const PopupMenuItem(value: 'rename', child: Text('重命名')),
-          const PopupMenuItem(value: 'delete', child: Text('删除', style: TextStyle(color: Colors.red))),
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'rename', child: Text('Rename')),
+          PopupMenuItem(
+            value: 'delete',
+            child: Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
       onTap: () {
-        context.to(() => VideoPlayerPage(videoId: video.id)).then((_) => _refresh());
+        context.to(() => VideoPlayerPage(videoId: video.id)).then((_) {
+          _refresh();
+        });
       },
     );
   }
@@ -113,19 +125,26 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('重命名'),
-        content: TextField(controller: controller, decoration: const InputDecoration(border: OutlineInputBorder())),
+        title: const Text('Rename'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                _db.updateVideoTitle(video.id, controller.text.trim());
+              final title = controller.text.trim();
+              if (title.isNotEmpty) {
+                _db.updateVideoTitle(video.id, title);
                 Navigator.pop(ctx);
                 _refresh();
               }
             },
-            child: const Text('确认'),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -136,10 +155,13 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('删除视频'),
-        content: Text('确定删除「${video.title}」吗？'),
+        title: const Text('Delete video'),
+        content: Text('Delete "${video.title}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
@@ -147,7 +169,7 @@ class _VideoTagListPageState extends State<VideoTagListPage> {
               Navigator.pop(ctx);
               _refresh();
             },
-            child: const Text('删除'),
+            child: const Text('Delete'),
           ),
         ],
       ),

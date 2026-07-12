@@ -38,6 +38,7 @@ extension _FutureInit<T> on Future<T> {
 Future<void> init() async {
   await App.init().wait();
   await SingleInstanceCookieJar.createInstance();
+  VideoDatabase().init();
   try {
     var futures = [
       Rhttp.init(),
@@ -49,7 +50,6 @@ Future<void> init() async {
       ComicSourceManager().init().wait(),
       OpenCC.init(),
     ];
-      VideoDatabase().init(),
     await Future.wait(futures);
   } catch (e, s) {
     Log.error("init", "$e\n$s");

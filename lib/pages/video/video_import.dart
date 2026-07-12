@@ -1,7 +1,7 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:file_selector/file_selector.dart';
+import 'package:flutter/material.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/pages/video/video_database.dart';
 
@@ -14,9 +14,9 @@ class VideoImportPage extends StatefulWidget {
 
 class _VideoImportPageState extends State<VideoImportPage> {
   final _db = VideoDatabase();
+  final _titleController = TextEditingController();
   List<VideoTag> _tags = [];
   String? _selectedPath;
-  String? _selectedFileName;
   int? _selectedTagId;
 
   @override
@@ -26,9 +26,15 @@ class _VideoImportPageState extends State<VideoImportPage> {
     _pickFile();
   }
 
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickFile() async {
     final typeGroup = XTypeGroup(
-      label: '视频',
+      label: 'video',
       extensions: ['mp4', 'mov', 'm4v', 'avi', 'mkv', 'wmv', 'flv'],
     );
     final file = await openFile(acceptedTypeGroups: [typeGroup]);
@@ -36,9 +42,10 @@ class _VideoImportPageState extends State<VideoImportPage> {
       if (mounted) Navigator.pop(context);
       return;
     }
+
     setState(() {
       _selectedPath = file.path;
-      _selectedFileName = file.name;
+      _titleController.text = file.name.replaceAll(RegExp(r'\.[^.]+$'), '');
     });
   }
 
@@ -49,11 +56,10 @@ class _VideoImportPageState extends State<VideoImportPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('导入视频')),
+      appBar: AppBar(title: const Text('Import video')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // File info card
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -70,15 +76,18 @@ class _VideoImportPageState extends State<VideoImportPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _selectedFileName ?? '',
+                        _titleController.text,
                         style: const TextStyle(fontWeight: FontWeight.w500),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '点击选择其他文件',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                        'Tap to choose another file',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
                       ),
                     ],
                   ),
@@ -90,32 +99,34 @@ class _VideoImportPageState extends State<VideoImportPage> {
               ],
             ),
           ),
-
           const SizedBox(height: 24),
-          const Text('视频标题', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('Video title', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           TextField(
-            controller: TextEditingController(text: _selectedFileName?.replaceAll(RegExp(r'\.[^.]+$'), '') ?? ''),
+            controller: _titleController,
             decoration: const InputDecoration(
-              hintText: '输入视频标题',
+              hintText: 'Enter video title',
               border: OutlineInputBorder(),
             ),
-            onChanged: (v) => _selectedFileName = v,
           ),
-
           const SizedBox(height: 24),
-          const Text('选择标签', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('Select tag', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
-          ...(_tags.map((tag) => RadioListTile<int>(
-            value: tag.id,
-            groupValue: _selectedTagId,
-            title: Text('${tag.emoji}  ${tag.name}'),
-            onChanged: (v) => setState(() => _selectedTagId = v),
-          ))),
+          ..._tags.map(
+            (tag) => RadioListTile<int>(
+              value: tag.id,
+              groupValue: _selectedTagId,
+              title: Text('${tag.emoji}  ${tag.name}'),
+              onChanged: (v) => setState(() => _selectedTagId = v),
+            ),
+          ),
           if (_tags.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('暂无标签，请先创建', style: TextStyle(color: Colors.grey.shade500)),
+              child: Text(
+                'No tags yet. Create one first.',
+                style: TextStyle(color: Colors.grey.shade500),
+              ),
             ),
         ],
       ),
@@ -125,7 +136,7 @@ class _VideoImportPageState extends State<VideoImportPage> {
           child: FilledButton.icon(
             onPressed: (_selectedTagId == null) ? null : _doImport,
             icon: const Icon(Icons.file_download),
-            label: const Text('导入到沙盒'),
+            label: const Text('Import'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
             ),
@@ -140,7 +151,7 @@ class _VideoImportPageState extends State<VideoImportPage> {
 
     final src = File(_selectedPath!);
     final videosDir = Directory('${App.dataPath}/videos');
-    if (!videosDir.existsSync()) videosDir.createSync();
+    if (!videosDir.existsSync()) videosDir.createSync(recursive: true);
 
     final ext = _selectedPath!.split('.').last;
     final destName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
@@ -149,12 +160,19 @@ class _VideoImportPageState extends State<VideoImportPage> {
     try {
       await src.copy(destPath);
 
-      // Get duration using ffprobe
       double duration = 0;
       try {
         final result = await Process.run(
           'ffprobe',
-          ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', destPath],
+          [
+            '-v',
+            'error',
+            '-show_entries',
+            'format=duration',
+            '-of',
+            'csv=p=0',
+            destPath,
+          ],
         );
         if (result.exitCode == 0) {
           duration = double.tryParse(result.stdout.toString().trim()) ?? 0;
@@ -162,7 +180,9 @@ class _VideoImportPageState extends State<VideoImportPage> {
       } catch (_) {}
 
       _db.addVideo(
-        _selectedFileName ?? '未命名',
+        _titleController.text.trim().isEmpty
+            ? 'Untitled'
+            : _titleController.text.trim(),
         destPath,
         duration,
         _selectedTagId!,
@@ -170,14 +190,14 @@ class _VideoImportPageState extends State<VideoImportPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('导入成功')),
+          const SnackBar(content: Text('Import success')),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('导入失败: $e')),
+          SnackBar(content: Text('Import failed: $e')),
         );
       }
     }
