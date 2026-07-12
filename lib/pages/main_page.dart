@@ -10,6 +10,7 @@ import '../foundation/app.dart';
 import 'explore_page.dart';
 import 'favorites/favorites_page.dart';
 import 'home_page.dart';
+import 'package:venera/pages/video/video_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -55,6 +56,9 @@ class _MainPageState extends State<MainPage> {
     const CategoriesPage(
       key: PageStorageKey('categories'),
     ),
+    const VideoPage(
+      key: PageStorageKey('video'),
+    ),
   ];
 
   var index = 0;
@@ -85,6 +89,11 @@ class _MainPageState extends State<MainPage> {
           label: 'Categories'.tl,
           icon: Icons.category_outlined,
           activeIcon: Icons.category,
+        ),
+        PaneItemEntry(
+          label: '视频',
+          icon: Icons.videocam_outlined,
+          activeIcon: Icons.videocam,
         ),
       ],
       onPageChanged: (i) {
