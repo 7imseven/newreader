@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:venera/foundation/app.dart';
 import 'package:venera/pages/video/video_database.dart';
+import 'package:venera/utils/io.dart';
 
 class VideoImportPage extends StatefulWidget {
   const VideoImportPage({super.key});
@@ -18,12 +18,14 @@ class _VideoImportPageState extends State<VideoImportPage> {
   List<VideoTag> _tags = [];
   String? _selectedPath;
   int? _selectedTagId;
+  bool _isPicking = false;
 
   @override
   void initState() {
     super.initState();
     _tags = _db.getTags();
-    _pickFile();
+    // Open file picker immediately on entry
+    WidgetsBinding.instance.addPostFrameCallback((_) => _pickFile());
   }
 
   @override
@@ -33,30 +35,68 @@ class _VideoImportPageState extends State<VideoImportPage> {
   }
 
   Future<void> _pickFile() async {
-    final typeGroup = XTypeGroup(
-      label: 'video',
-      extensions: ['mp4', 'mov', 'm4v', 'avi', 'mkv', 'wmv', 'flv'],
-    );
-    final file = await openFile(acceptedTypeGroups: [typeGroup]);
-    if (file == null) {
-      if (mounted) Navigator.pop(context);
-      return;
-    }
+    setState(() => _isPicking = true);
 
-    setState(() {
-      _selectedPath = file.path;
-      _titleController.text = file.name.replaceAll(RegExp(r'\.[^.]+$'), '');
-    });
+    try {
+      // Use Venera's built-in selectFile which handles iOS correctly
+      final file = await selectFile(ext: ['mp4', 'mov', 'm4v']);
+      if (file == null || !mounted) {
+        setState(() => _isPicking = false);
+        return;
+      }
+      setState(() {
+        _selectedPath = file.path;
+        _titleController.text = file.path.split('/').last.replaceAll(RegExp(r'\.[^.]+$'), '');
+        _isPicking = false;
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isPicking = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('选择文件失败: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_selectedPath == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    // Loading state while picking
+    if (_isPicking) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
 
+    // No file selected yet - show picker prompt
+    if (_selectedPath == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('导入视频')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.video_file, size: 64, color: Colors.grey.shade300),
+              const SizedBox(height: 16),
+              Text(
+                '选择一个视频文件导入',
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _pickFile,
+                icon: const Icon(Icons.file_open),
+                label: const Text('选择视频文件'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // File selected - show import form
     return Scaffold(
-      appBar: AppBar(title: const Text('Import video')),
+      appBar: AppBar(title: const Text('导入视频')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -83,11 +123,8 @@ class _VideoImportPageState extends State<VideoImportPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Tap to choose another file',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                        ),
+                        '点击重新选择',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                       ),
                     ],
                   ),
@@ -100,17 +137,17 @@ class _VideoImportPageState extends State<VideoImportPage> {
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Video title', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('视频标题', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           TextField(
             controller: _titleController,
             decoration: const InputDecoration(
-              hintText: 'Enter video title',
+              hintText: '输入视频标题',
               border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 24),
-          const Text('Select tag', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text('选择标签', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           ..._tags.map(
             (tag) => RadioListTile<int>(
@@ -124,7 +161,7 @@ class _VideoImportPageState extends State<VideoImportPage> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'No tags yet. Create one first.',
+                '暂无标签，请先创建',
                 style: TextStyle(color: Colors.grey.shade500),
               ),
             ),
@@ -136,7 +173,7 @@ class _VideoImportPageState extends State<VideoImportPage> {
           child: FilledButton.icon(
             onPressed: (_selectedTagId == null) ? null : _doImport,
             icon: const Icon(Icons.file_download),
-            label: const Text('Import'),
+            label: const Text('导入到沙盒'),
             style: FilledButton.styleFrom(
               minimumSize: const Size(double.infinity, 48),
             ),
@@ -151,7 +188,7 @@ class _VideoImportPageState extends State<VideoImportPage> {
 
     final src = File(_selectedPath!);
     final videosDir = Directory('${App.dataPath}/videos');
-    if (!videosDir.existsSync()) videosDir.createSync(recursive: true);
+    if (!videosDir.existsSync()) videosDir.createSync();
 
     final ext = _selectedPath!.split('.').last;
     final destName = '${DateTime.now().millisecondsSinceEpoch}.$ext';
@@ -162,18 +199,11 @@ class _VideoImportPageState extends State<VideoImportPage> {
 
       double duration = 0;
       try {
-        final result = await Process.run(
-          'ffprobe',
-          [
-            '-v',
-            'error',
-            '-show_entries',
-            'format=duration',
-            '-of',
-            'csv=p=0',
-            destPath,
-          ],
-        );
+        final result = await Process.run('ffprobe', [
+          '-v', 'error',
+          '-show_entries', 'format=duration',
+          '-of', 'csv=p=0', destPath,
+        ]);
         if (result.exitCode == 0) {
           duration = double.tryParse(result.stdout.toString().trim()) ?? 0;
         }
@@ -181,7 +211,7 @@ class _VideoImportPageState extends State<VideoImportPage> {
 
       _db.addVideo(
         _titleController.text.trim().isEmpty
-            ? 'Untitled'
+            ? '未命名'
             : _titleController.text.trim(),
         destPath,
         duration,
@@ -190,14 +220,14 @@ class _VideoImportPageState extends State<VideoImportPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Import success')),
+          const SnackBar(content: Text('导入成功')),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Import failed: $e')),
+          SnackBar(content: Text('导入失败: $e')),
         );
       }
     }
