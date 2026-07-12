@@ -28,7 +28,6 @@ class _FakeChatPageState extends State<FakeChatPage>
   // Animation
   late final AnimationController _animController;
   late final Animation<double> _sidebarAnim;
-  late final Animation<double> _scaleAnim;
   late final Animation<double> _overlayAnim;
 
   @override
@@ -44,10 +43,7 @@ class _FakeChatPageState extends State<FakeChatPage>
       vsync: this,
       duration: const Duration(milliseconds: 350),
     );
-    _sidebarAnim = Tween<double>(begin: -1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
-    );
-    _scaleAnim = Tween<double>(begin: 1.0, end: 0.93).animate(
+    _sidebarAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
     );
     _overlayAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -176,7 +172,7 @@ class _FakeChatPageState extends State<FakeChatPage>
               builder: (context, child) {
                 final screenWidth = MediaQuery.of(context).size.width;
                 return Transform.translate(
-                  offset: Offset(screenWidth * 0.2 * _sidebarAnim.value, 0),
+                  offset: Offset(-screenWidth * 0.8 * (1.0 - _sidebarAnim.value), 0),
                   child: SizedBox(
                     width: screenWidth * 0.8,
                     child: _buildSidebar(),
@@ -193,13 +189,13 @@ class _FakeChatPageState extends State<FakeChatPage>
 
   Widget _buildMainChat() {
     return AnimatedBuilder(
-      animation: _scaleAnim,
+      animation: _sidebarAnim,
       builder: (context, child) {
         final screenWidth = MediaQuery.of(context).size.width;
         return Transform(
           transform: Matrix4.identity()
             ..translate(screenWidth * 0.8 * _sidebarAnim.value)
-            ..scale(_scaleAnim.value),
+            ..scale(1.0 - 0.07 * _sidebarAnim.value),
           alignment: Alignment.centerLeft,
           child: child,
         );
