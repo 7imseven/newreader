@@ -240,9 +240,9 @@ class _FakeChatPageState extends State<FakeChatPage>
             icon: const Icon(Icons.menu),
             onPressed: _toggleSidebar,
           ),
-          const Spacer(),
+          const SizedBox(width: 4),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: Colors.purple.shade50,
               borderRadius: BorderRadius.circular(20),
@@ -250,12 +250,15 @@ class _FakeChatPageState extends State<FakeChatPage>
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('✨', style: TextStyle(fontSize: 14)),
-                SizedBox(width: 4),
-                Text('升级', style: TextStyle(fontSize: 13, color: Colors.purple)),
+                Text('✨', style: TextStyle(fontSize: 13)),
+                SizedBox(width: 3),
+                Text('升级', style: TextStyle(fontSize: 12, color: Colors.purple)),
               ],
             ),
           ),
+          const Spacer(),
+          const Text('ChatGPT',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
           const Spacer(),
           PopupMenuButton<String>(
             icon: const Icon(Icons.autorenew),
@@ -385,7 +388,7 @@ class _FakeChatPageState extends State<FakeChatPage>
   Widget _buildBottomInput() {
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 4),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           border: Border(
@@ -393,18 +396,21 @@ class _FakeChatPageState extends State<FakeChatPage>
           ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Plus button
             IconButton(
-              icon: const Icon(Icons.add_circle_outline),
+              icon: const Icon(Icons.add_circle_outline, size: 22),
               color: Colors.grey.shade600,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              padding: EdgeInsets.zero,
               onPressed: _showAttachmentSheet,
             ),
+            const SizedBox(width: 6),
             // Text field
             Expanded(
               child: Container(
-                constraints: const BoxConstraints(maxHeight: 120),
+                constraints: const BoxConstraints(minHeight: 40, maxHeight: 120),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(24),
@@ -417,29 +423,31 @@ class _FakeChatPageState extends State<FakeChatPage>
                   onSubmitted: (_) => _onSend(),
                   decoration: const InputDecoration(
                     hintText: '询问 ChatGPT',
-                    hintStyle: TextStyle(color: Colors.grey),
+                    hintStyle: TextStyle(color: Colors.grey, fontSize: 15),
                     border: InputBorder.none,
                     contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             // Send / Mic button
-            GestureDetector(
-              onTap: _hasText ? _onSend : null,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _hasText ? Colors.blue : Colors.blue.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _hasText ? Icons.arrow_upward : Icons.mic,
-                  color: Colors.white,
-                  size: 20,
+            SizedBox(
+              width: 36,
+              height: 36,
+              child: GestureDetector(
+                onTap: _hasText ? _onSend : null,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: _hasText ? Colors.blue : Colors.blue.shade100,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    _hasText ? Icons.arrow_upward : Icons.mic,
+                    color: Colors.white,
+                    size: 18,
+                  ),
                 ),
               ),
             ),
